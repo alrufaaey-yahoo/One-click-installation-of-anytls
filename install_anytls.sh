@@ -113,7 +113,7 @@ Description=anytls Service
 After=network.target
 
 [Service]
-ExecStart=$BINARY_DIR/$BINARY_NAME -l 0.0.0.0:8443 -p $PASSWORD
+ExecStart=$BINARY_DIR/$BINARY_NAME -l 10.0.0.4:443 -p $PASSWORD
 Restart=always
 User=root
 Group=root
@@ -138,7 +138,7 @@ EOF
     echo -e "\n\033[32m√ 安装完成！\033[0m"
     echo -e "\033[32m√ 架构类型: ${BINARY_ARCH}\033[0m"
     echo -e "\033[32m√ 服务名称: $SERVICE_NAME\033[0m"
-    echo -e "\033[32m√ 监听端口: 0.0.0.0:8443\033[0m"
+    echo -e "\033[32m√ 监听端口: 10.0.0.4:443\033[0m"
     echo -e "\033[32m√ 密码已设置为: $PASSWORD\033[0m"
     echo -e "\n\033[33m管理命令:\033[0m"
     echo -e "  启动: systemctl start $SERVICE_NAME"
@@ -148,7 +148,7 @@ EOF
     
     # 高亮显示连接信息
     echo -e "\n\033[36m\033[1m〓 NekoBox连接信息 〓\033[0m"
-    echo -e "\033[30;43m\033[1m anytls://$PASSWORD@$SERVER_IP:8443/?insecure=1 \033[0m"
+    echo -e "\033[30;43m\033[1m anytls://$PASSWORD@$SERVER_IP:443/?insecure=1 \033[0m"
     echo -e "\033[33m\033[1m请妥善保管此连接信息！\033[0m"
 }
 
