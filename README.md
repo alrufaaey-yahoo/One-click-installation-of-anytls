@@ -1,20 +1,24 @@
 # One-click Installation of anytls
 
-🚀 一个简单快速的 anytls 服务一键部署脚本，适用于 Linux 服务器。
+🚀 A simple and fast one-click deployment script for anytls service, suitable for Linux servers.
 
-## 快速安装
+## Quick Installation
 
-执行以下命令即可完成安装：
+Execute the following command to complete the installation:
 
 ```bash
-bash <(curl -sL https://raw.githubusercontent.com/kirito201711/One-click-installation-of-anytls/main/install_anytls.sh)
+bash <(curl -sL https://raw.githubusercontent.com/alrufaaey-yahoo/One-click-installation-of-anytls/refs/heads/main/install_anytls.sh)
 ```
 
-## 功能特性
+## Features
 
-- ✔️ 全自动安装配置
-- ✔️ 支持 systemd 服务管理
-- ✔️ 自动设置监听端口和密码
-- ✔️ 包含服务状态监控
-- ✔️ 支持 Ubuntu/Debian
-- 使用此脚本ip被封责任自负
+- ✔️ Fully automated installation and configuration
+- ✔️ Supports systemd service management
+- ✔️ Automatic setup of listening port and password
+- ✔️ Includes service status monitoring
+- ✔️ Supports Ubuntu/Debian
+- You are responsible for any IP blocking resulting from using this script
+
+## Designer
+**Designed by Al-Rufaaey**  
+📱 Telegram: [@alrufaaey](https://t.me/alrufaaey)
