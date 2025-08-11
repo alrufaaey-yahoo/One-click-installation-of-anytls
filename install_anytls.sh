@@ -1,51 +1,51 @@
 #!/bin/bash
 
-# anytls 安装/卸载管理脚本
-# 功能：安装 anytls 或彻底卸载（含 systemd 服务清理）
-# 支持架构：amd64 (x86_64)、arm64 (aarch64)、armv7 (armv7l)
+# anytls installation/uninstallation management script
+# Features: Install anytls or completely uninstall (including systemd service cleanup)
+# Supported architectures: amd64 (x86_64), arm64 (aarch64), armv7 (armv7l)
 
-# 检查 root 权限
+# Check root privileges
 if [ "$(id -u)" -ne 0 ]; then
-    echo "必须使用 root 或 sudo 运行！"
+    echo "Must be run as root or with sudo!"
     exit 1
 fi
 
-# 安装必要工具：wget, curl, unzip
+# Install necessary tools: wget, curl, unzip
 function install_dependencies() {
-    echo "[初始化] 正在安装必要依赖（wget, curl, unzip）..."
+    echo "[Initialization] Installing required dependencies (wget, curl, unzip)..."
     apt update -y >/dev/null 2>&1
 
     for dep in wget curl unzip; do
         if ! command -v $dep &>/dev/null; then
-            echo "正在安装 $dep..."
+            echo "Installing $dep..."
             apt install -y $dep || {
-                echo "无法安装依赖: $dep，请手动运行 'sudo apt install $dep' 后再继续。"
+                echo "Failed to install dependency: $dep, please manually run 'sudo apt install $dep' and try again."
                 exit 1
             }
         fi
     done
 }
 
-# 调用依赖安装函数
+# Call dependency installation function
 install_dependencies
 
-# 自动检测系统架构
+# Automatically detect system architecture
 ARCH=$(uname -m)
 case $ARCH in
     x86_64)  BINARY_ARCH="amd64" ;;
     aarch64) BINARY_ARCH="arm64" ;;
     armv7l)  BINARY_ARCH="armv7" ;;
-    *)       echo "不支持的架构: $ARCH"; exit 1 ;;
+    *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
 esac
 
-# 配置参数（注意这里去掉了 linux_ 后面多余的空格）
+# Configuration parameters (note: removed extra space after linux_)
 DOWNLOAD_URL="https://github.com/anytls/anytls-go/releases/download/v0.0.8/anytls_0.0.8_linux_${BINARY_ARCH}.zip"
 ZIP_FILE="/tmp/anytls_0.0.8_linux_${BINARY_ARCH}.zip"
 BINARY_DIR="/usr/local/bin"
 BINARY_NAME="anytls-server"
 SERVICE_NAME="anytls"
 
-# 改进的IP获取函数
+# Improved IP retrieval function
 get_ip() {
     local ip=""
     ip=$(ip -o -4 addr show scope global | awk '{print $4}' | cut -d'/' -f1 | head -n1)
@@ -53,67 +53,75 @@ get_ip() {
     [ -z "$ip" ] && ip=$(curl -4 -s --connect-timeout 3 ifconfig.me 2>/dev/null || curl -4 -s --connect-timeout 3 icanhazip.com 2>/dev/null)
     
     if [ -z "$ip" ]; then
-        echo "未能自动获取IP，请手动输入服务器IP地址"
-        read -p "请输入服务器IP地址: " ip
+        echo "Failed to automatically retrieve IP, please manually enter the server IP address"
+        read -p "Enter server IP address: " ip
     fi
     
     echo "$ip"
 }
 
-# 显示菜单
+# Display menu
 function show_menu() {
     clear
     echo "-------------------------------------"
-    echo " anytls 服务管理脚本 (${BINARY_ARCH}架构) "
+    echo " anytls Service Management Script (${BINARY_ARCH} architecture) "
     echo "-------------------------------------"
-    echo "1. 安装 anytls"
-    echo "2. 卸载 anytls"
-    echo "0. 退出"
+    echo "1. Install anytls"
+    echo "2. Uninstall anytls"
+    echo "0. Exit"
     echo "-------------------------------------"
-    read -p "请输入选项 [0-2]: " choice
+    read -p "Enter option [0-2]: " choice
     case $choice in
         1) install_anytls ;;
         2) uninstall_anytls ;;
         0) exit 0 ;;
-        *) echo "无效选项！" && sleep 1 && show_menu ;;
+        *) echo "Invalid option!" && sleep 1 && show_menu ;;
     esac
 }
 
-# 安装功能
+# Installation function
 function install_anytls() {
-    # 下载
-    echo "[1/5] 下载 anytls (${BINARY_ARCH}架构)..."
+    # Download
+    echo "[1/6] Downloading anytls (${BINARY_ARCH} architecture)..."
     wget "$DOWNLOAD_URL" -O "$ZIP_FILE" || {
-        echo "下载失败！可能原因："
-        echo "1. 网络连接问题"
-        echo "2. 该架构的二进制文件不存在"
+        echo "Download failed! Possible reasons:"
+        echo "1. Network connection issue"
+        echo "2. Binary for this architecture doesn't exist"
         exit 1
     }
 
-    # 解压
-    echo "[2/5] 解压文件..."
+    # Extract
+    echo "[2/6] Extracting files..."
     unzip -o "$ZIP_FILE" -d "$BINARY_DIR" || {
-        echo "解压失败！文件可能损坏"
+        echo "Extraction failed! File may be corrupted"
         exit 1
     }
     chmod +x "$BINARY_DIR/$BINARY_NAME"
 
-    # 输入密码
-    read -p "设置 anytls 的密码: " PASSWORD
+    # Input password
+    read -p "Set anytls password: " PASSWORD
     [ -z "$PASSWORD" ] && {
-        echo "错误：密码不能为空！"
+        echo "Error: Password cannot be empty!"
         exit 1
     }
 
-    # 配置服务
-    echo "[3/5] 配置 systemd 服务..."
+    # Input port (new feature)
+    read -p "Enter listening port [default 8443]: " PORT
+    [ -z "$PORT" ] && PORT=8443
+    if ! [[ "$PORT" =~ ^[0-9]+$ ]] || [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
+        echo "Invalid port number! Using default 8443"
+        PORT=8443
+    fi
+
+    # Configure service
+    echo "[3/6] Configuring systemd service..."
     cat > /etc/systemd/system/$SERVICE_NAME.service <<EOF
 [Unit]
 Description=anytls Service
 After=network.target
 
 [Service]
-ExecStart=$BINARY_DIR/$BINARY_NAME -l 0.0.0.0:8443 -p $PASSWORD
+ExecStart=$BINARY_DIR/$BINARY_NAME -l 0.0.0.0:$PORT -p $PASSWORD
 Restart=always
 User=root
 Group=root
@@ -122,67 +130,67 @@ Group=root
 WantedBy=multi-user.target
 EOF
 
-    # 启动服务
-    echo "[4/5] 启动服务..."
+    # Start service
+    echo "[4/6] Starting service..."
     systemctl daemon-reload
     systemctl enable $SERVICE_NAME
     systemctl start $SERVICE_NAME
 
-    # 清理
+    # Cleanup
     rm -f "$ZIP_FILE"
 
-    # 获取服务器IP
+    # Get server IP
     SERVER_IP=$(get_ip)
 
-    # 验证
-    echo -e "\n\033[32m√ 安装完成！\033[0m"
-    echo -e "\033[32m√ 架构类型: ${BINARY_ARCH}\033[0m"
-    echo -e "\033[32m√ 服务名称: $SERVICE_NAME\033[0m"
-    echo -e "\033[32m√ 监听端口: 0.0.0.0:8443\033[0m"
-    echo -e "\033[32m√ 密码已设置为: $PASSWORD\033[0m"
-    echo -e "\n\033[33m管理命令:\033[0m"
-    echo -e "  启动: systemctl start $SERVICE_NAME"
-    echo -e "  停止: systemctl stop $SERVICE_NAME"
-    echo -e "  重启: systemctl restart $SERVICE_NAME"
-    echo -e "  状态: systemctl status $SERVICE_NAME"
+    # Verification
+    echo -e "\n\033[32m√ Installation complete!\033[0m"
+    echo -e "\033[32m√ Architecture: ${BINARY_ARCH}\033[0m"
+    echo -e "\033[32m√ Service name: $SERVICE_NAME\033[0m"
+    echo -e "\033[32m√ Listening port: 0.0.0.0:${PORT}\033[0m"
+    echo -e "\033[32m√ Password set to: $PASSWORD\033[0m"
+    echo -e "\n\033[33mManagement commands:\033[0m"
+    echo -e "  Start: systemctl start $SERVICE_NAME"
+    echo -e "  Stop: systemctl stop $SERVICE_NAME"
+    echo -e "  Restart: systemctl restart $SERVICE_NAME"
+    echo -e "  Status: systemctl status $SERVICE_NAME"
     
-    # 高亮显示连接信息
-    echo -e "\n\033[36m\033[1m〓 NekoBox连接信息 〓\033[0m"
-    echo -e "\033[30;43m\033[1m anytls://$PASSWORD@$SERVER_IP:8443/?insecure=1 \033[0m"
-    echo -e "\033[33m\033[1m请妥善保管此连接信息！\033[0m"
+    # Highlight connection information
+    echo -e "\n\033[36m\033[1m〓 NekoBox Connection Information 〓\033[0m"
+    echo -e "\033[30;43m\033[1m anytls://$PASSWORD@$SERVER_IP:$PORT/?insecure=1 \033[0m"
+    echo -e "\033[33m\033[1mPlease securely store this connection information!\033[0m"
 }
 
-# 卸载功能
+# Uninstallation function
 function uninstall_anytls() {
-    echo "正在卸载 anytls..."
+    echo "Uninstalling anytls..."
     
-    # 停止服务
+    # Stop service
     if systemctl is-active --quiet $SERVICE_NAME; then
         systemctl stop $SERVICE_NAME
-        echo "[1/4] 已停止服务"
+        echo "[1/4] Service stopped"
     fi
 
-    # 禁用服务
+    # Disable service
     if systemctl is-enabled --quiet $SERVICE_NAME; then
         systemctl disable $SERVICE_NAME
-        echo "[2/4] 已禁用开机启动"
+        echo "[2/4] Autostart disabled"
     fi
 
-    # 删除文件
+    # Delete files
     if [ -f "$BINARY_DIR/$BINARY_NAME" ]; then
         rm -f "$BINARY_DIR/$BINARY_NAME"
-        echo "[3/4] 已删除二进制文件"
+        echo "[3/4] Binary file deleted"
     fi
 
-    # 清理配置
+    # Cleanup configuration
     if [ -f "/etc/systemd/system/$SERVICE_NAME.service" ]; then
         rm -f "/etc/systemd/system/$SERVICE_NAME.service"
         systemctl daemon-reload
-        echo "[4/4] 已移除服务配置"
+        echo "[4/4] Service configuration removed"
     fi
 
-    echo -e "\n\033[32m[结果]\033[0m anytls 已完全卸载！"
+    echo -e "\n\033[32m[Result]\033[0m anytls completely uninstalled!"
 }
 
-# 启动菜单
+# Start menu
 show_menu
